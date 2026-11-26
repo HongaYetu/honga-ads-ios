@@ -1,6 +1,6 @@
 # Honga Ads — SDK iOS (Swift)
 
-SDK nativo iOS da rede de publishers Honga Yetu: banner, interstitial e rewarded. Swift Package sem dependências (URLSession + UIKit).
+SDK nativo iOS da rede de publishers Honga Yetu: banner, nativo, interstitial e rewarded. Swift Package sem dependências (URLSession + UIKit).
 
 Documentação completa: [dev.honga.com/docs/honga-ads](https://dev.honga.com/docs/honga-ads).
 
@@ -24,6 +24,12 @@ let banner = HongaAdsBannerView()
 banner.loadAd(unitId: "hy-unit-xxxxxxxx")
 stack.addArrangedSubview(banner)
 
+// Nativo (desde a 0.2.0) — desenhado por peças, para listas e conteúdo
+let nativo = HongaAdsNativeView()
+nativo.forma = .linha // por omissão .destaque
+nativo.loadAd(unitId: "hy-unit-xxxxxxxx")
+stack.addArrangedSubview(nativo)
+
 // Interstitial (ciclo load/show)
 if let ad = await InterstitialAd.load(unitId: "hy-unit-yyyy") {
     ad.show(from: viewController) // nil = no-fill
@@ -34,6 +40,19 @@ if let ad = await RewardedAd.load(unitId: "hy-unit-zzzz") {
     ad.show(from: viewController) { _ in darRecompensa() }
 }
 ```
+
+## Anúncio nativo (desde a 0.2.0)
+
+O `HongaAdsNativeView` desenha o anúncio com as suas **peças** (fotografia sem texto, título, descrição, botão, logótipo e anunciante) e a etiqueta «Patrocinado», em vez de uma imagem pronta.
+
+- Usa as cores do sistema (`.systemBackground`, `.label`, `.secondaryLabel`, `.separator`) e o `tintColor` da view, no modo claro e no escuro, e a letra dinâmica. Para dizer as tuas: `nativo.cores = CoresNativo(...)`; a letra: `nativo.nomeDaLetra`; os cantos: `nativo.raio`.
+- É plano: sem gradientes nem sombras. A fotografia é recortada à caixa e pede-se na largura mais pequena que chegue.
+- A cor da marca só entra no botão, e só quando tem contraste (3:1) com a superfície; senão usa-se a `primaria` (o `tintColor`).
+- Um anúncio sem peças sai como imagem pronta, como no banner. No-fill esconde a view.
+- A etiqueta «Patrocinado» é obrigatória e não tem opção para a esconder.
+- A impressão e o clique são os do banner.
+
+O banner, o interstitial e o rewarded não mudam: continuam com a imagem ou o vídeo prontos.
 
 ## Comportamento
 

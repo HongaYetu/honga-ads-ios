@@ -15,6 +15,9 @@ public struct Anuncio: Sendable {
     /// true quando servido em ambiente test (criativo fictício, sem custo).
     public let teste: Bool
     public let assets: [AdAsset]
+    /// As peças do anúncio (a chave `nativo` do `/serve`), para o desenhar
+    /// com componentes da app. nil nos anúncios sem peças: vale o asset.
+    public let nativo: PecasNativo?
 }
 
 public struct ServeResultado: Sendable {
@@ -46,13 +49,16 @@ final class AdsClient: @unchecked Sendable {
     }
 
     /// Pede um anúncio. Devolve nil em no-fill ou erro.
-    func serve(unitUid: String, slotWidth: Int? = nil, slotHeight: Int? = nil) async -> ServeResultado? {
+    func serve(unitUid: String, slotWidth: Int? = nil, slotHeight: Int? = nil, aceitaNativo: Bool = false) async -> ServeResultado? {
         var corpo: [String: Any] = [
             "ad_unit_uid": unitUid,
             "device_id": deviceId,
         ]
         if let slotWidth { corpo["slot_width"] = slotWidth }
         if let slotHeight { corpo["slot_height"] = slotHeight }
+        // Só segue quando é verdade: o banner, o interstitial e o rewarded
+        // fazem exactamente o pedido de sempre.
+        if aceitaNativo { corpo["aceita_nativo"] = true }
 
         guard
             let resposta = await post("/serve", corpo: corpo),
@@ -81,7 +87,11 @@ final class AdsClient: @unchecked Sendable {
             )
         }
 
-        guard !assets.isEmpty else {
+        // Só quem pediu peças as lê. Com `aceita_nativo`, um anúncio por peças
+        // pode vir sem assets; sem peças nem assets não há nada para mostrar.
+        let nativo = aceitaNativo ? Pecas.ler(anuncioJson["nativo"]) : nil
+
+        guard !assets.isEmpty || nativo != nil else {
             return nil
         }
 
@@ -90,7 +100,8 @@ final class AdsClient: @unchecked Sendable {
                 id: anuncioJson["id"] as? Int ?? 0,
                 nome: anuncioJson["nome"] as? String,
                 teste: anuncioJson["teste"] as? Bool ?? false,
-                assets: assets
+                assets: assets,
+                nativo: nativo
             ),
             impressionToken: impression,
             clickToken: click
